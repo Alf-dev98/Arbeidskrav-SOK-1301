@@ -1,0 +1,317 @@
+---
+title: "SOK-1301 H25 - Case 2"
+author: "Alf Jacob Melbye"
+format: pdf
+editor: visual
+---
+
+## Instruksjoner
+
+Denne oppgaven er opprinnelig laget av Even S. Hvinden og oppdatert av Mikko Moilanen. Sistnevnte er ansvarlig for eventuelle feil og mangler.
+
+Oppgaven skal løses interaktivt i RStudio ved å legge inn egen kode og kommentarer. Det ferdige dokumentet lagres med kandidatnummeret som navn `[kandidatnummer]_SOK1301_C2_H25.qmd` og lastes opp på deres GitHub-side. Hvis du har kandidatnummer 43, så vil filen hete `43_SOK1301_C2_H25.qmd`. Påse at koden kjører og at dere kan eksportere besvarelsen til pdf. Lever så lenken til GitHub-repositoriumet i Canvas.
+
+## Bakgrunn
+
+Økonomisk vekst gir økt kjøpekraft og velferd. Økningen i økonomisk aktivitet har hittil blitt muliggjort gjennom å utnytte fossile energikilder som kull, olje og gass. Forbrenningen av hydrokarboner har over tid økt mengden CO2 i atmosfæren og forårsaket endringer i klimaet. Klimaendringene medfører en rekke kostnader, blant andre hyppigere og mer intense innslag av ekstreme værforhold. I den grad veksten drives av fossile energikilder er det ikke opplagt at høyere økonomisk aktivitet vil øke menneskelig velferd på sikt. Vi står ovenfor en avveining mellom økt kjøpekraft og klimaendringer.
+
+I denne oppgaven skal vi utforske avveiningen mellom kjøpekraft og klimaendringer ved å studere sammenhengen mellom CO2-utslipp og bruttonasjonalprodukt (BNP) på tvers av land. Data henter vi fra [OWID](https://ourworldindata.org/co2-emissions). En beskrivelse av dataene (kodebok) finnes [her](https://github.com/owid/co2-data/blob/master/owid-co2-codebook.csv).
+
+Vi skal utforske følgende: Hvilke land har høyest CO2 utslipp? Hvordan kan utslippene sammenlignes når vi tar hensyn til befolkningen og størrelsen på økonomiene? Kan bruken av kull til energiproduksjon forklare forskjellen mellom land? Hvordan stiller utslippene seg når vi justerer for internasjonal handel og skiller mellom produksjon og forbruk?
+
+**Merknad.** I oppgaven definerer jeg variabler matematisk og ber dere lage figurer av de. Alle variablene finnes i datasettet. En del av oppgaven er å finne dem.
+
+## Last inn pakker
+
+```{r}
+rm(list=ls())
+library(tidyverse)
+```
+
+## Last ned data
+
+```{r}
+url <- 
+  "https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv"
+
+df <- url %>%
+  read_csv()
+```
+
+## I. Karbonintensitet i produksjon
+
+Vi skal studere sammenhengen mellom BNP og CO2 for de fem største økonomiene i verden, målt ved kjøpekraftjustert BNP. Disse landene er:
+
+```{r}
+list <- c("China", "United States", "India", "Japan", "Germany")
+```
+
+Betrakt følgende figur
+
+```{r}
+df %>%
+  
+  mutate(gdp = gdp/10^12) %>%
+
+  mutate(co2 = co2/10^3) %>%
+
+  filter(country %in% list) %>% 
+  
+  ggplot(aes(x=gdp, y=co2, color = country)) %>%
+  
+  + geom_point() %>%
+  
+  + geom_smooth(se = FALSE) %>%
+  
+  + labs(y = "CO2", x = "GDP", title = "GDP vs CO2", subtitle = "Production-based C02 emissions, billions of tons. 
+GDP in trillions of USD, constant 2011 prices at purchasing power parity. 1850-2023.", color = "Country") %>%
+  
+  + theme_bw()
+```
+
+Kommandoen `geom_smooth()` bruker en![](http://127.0.0.1:22603/chunk_output/s/DE701309/czsyo992mhzg4/00001e.png) såkalt lokal regresjon til å tegne en kurve gjennom datapunktene. Dere kan tenke på dette som en gjennomsnittlig sammenheng, eller at man har tegnet en strek gjennom datapunktene med en penn.
+
+### Oppgave Ia
+
+Gi en fullstendig og nøyaktig beskrivelse av figuren. Tolk helningen på linjene og diskuter variasjon mellom og innad i landene. Drøft hvilke forhold figuren illustrerer på en god måte og hvilken informasjon som er vanskelig å tolke.
+
+*\[Svar på oppgave Ia her.\]*
+
+....................
+
+Figuren over viser utviklingen av produkjsonsbasert co2-utslipp (målt i milliarder av tonn), og BNP (målt med kjøpekraftjusterte USD ved faste 2011-priser), hvor de ulike landene er visualisert med ulike farger.
+
+Vi ser at Kina har en bratt og stigende kurve som flater seg noe ut på toppen. Dette tyder på at landet har hadt en stor vekst i både økonomien og utslipp, men har ved de høye BNP verdiene klart å flate ut veksten av utslippene.
+
+Tyskland har en bratt kurve i starten, men ettersom økonomien blir større, ser vi at kurven begynner å synke.
+
+India har en jevn vekst, hvor co2 utslipp øker i samsvar med økonomien, uten noen tegn til å flate seg ut eller synke.
+
+Japan har en en økning i kurven, men ettersom økonomien har blitt større, har co2 utslippene begynt å vokse saktere, og utifra grafen virker det som at kurven er i ferd med å flate seg ut.
+
+USA's kurve har i starten en ganske bratt kurve som viser til en stor vekst i BNP og utslipp, men ettersom økonomien blir større ser vi at kurven flater seg ut, og til og med synker.
+
+Figuren illustrerer godt sammenhengen mellom økonomisk vekst og utslipp mellom de ulike landene. Men den mangler årstall som gjør at den er vanskelig å tolke ettersom man ikke vet når utviklingen av kurvene foregår. Figuren viser oss også kunn totale utslipp, som kan være misvisende, ettersom det er stor variasjon i størrelse i de ulike landene.
+
+....................
+
+### Oppgave Ib
+
+Vi betrakter nå et normalisert mål på sammenhengen CO2-utslipp og inntekt. La $CO2_{t}$ og $BNP_{t}$ være henholdsvis årlige utslipp av CO2 og brutto nasjonalprodukt i år $t$. Vi måler $CO2_{t}$ i kilogram og $BNP_{t}$ i kjøpekraftjusterte USD ved faste 2011-priser. Vi kan definere karbonintensiteten i produksjon som $CI_{t}=CO{2}_{t}/BNP_{t}$, altså antall kilogram CO2 per USD i verdiskapning.
+
+Lag en figur som viser karbonintensiteten $CI_{t}$ til de fem største økonomiene (navnene er lagret i variabelen `list` over) fra 1850 til 2023. Sammenlign $CI_{t}$ med helningen fra figuren i oppgave Ia. Gi en fullstendig og nøyaktig beskrivelse av figuren. Drøft minst to forhold som du tror kan være av avgjørende betydningen for å forklare variasjonen innad og mellom land.
+
+```{r}
+# Løs oppgave Ib her
+
+df <- df %>%
+  mutate(CIt = co2 / gdp)
+  
+df %>%
+  filter(country %in% list) %>%
+  
+  ggplot(aes(x=year, y=CIt, color = country)) +
+  
+  geom_point(size = 0.5)  +
+  
+  geom_line() +
+  
+  scale_x_continuous(limits = c(1850, 2023))
+
+```
+
+*\[Besvar oppgave 1b her\]*
+
+Sammenlign $CI_{t}$ med helningen fra figuren i oppgave Ia. Gi en fullstendig og nøyaktig beskrivelse av figuren. Drøft minst to forhold som du tror kan være av avgjørende betydningen for å forklare variasjonen innad og mellom land.
+
+....................
+
+Figuren ovenfor viser utviklingen av karbonintensiteten i de ulike landene. karbonintensiteten er målt ved produksjonsbasert co2- utslipp delt på Brutto Nasjonalprodukt. De ulike landene er visualisert i ulike farger.
+
+Figurene viser en tydelig korrelasjon mellom karbonintisitet og vekst i produksjonsbasert utslipp. Vi ser at høyere karbonintensitet fører til større co2- utslipp. Ser vi på USA sin utvikling i de to grafene, virker det som at kurven nesten beveger seg likt, hvor den starter med å øke, for deretter å flate ut og så synke. Ser vi på india, ser økningen veldig lik ut i begge grafene, med en jevn og nesten rett vekst.
+
+En mulig årsak for variasjonene mellom de ulike landene kan være hvilken energi- kilde som blir brukt mest. Energi- kilder som kull og fossile brennstoff fører til mye mer utslipp enn for eksempel naturgass, atomkraft eller fornybar energi. Grunnen til variasjonen til de ulike landene kan blant annet skyldes hvordan de har klart å omstille seg til fornybare energi- kilder eller ikke.
+
+En annen årsak for variasjonene mellom de ulike landene kan være hva slags industri som blir mest satset på. produksjon av tjenester er ofte mindre energi- krevende enn produskjon av varer.
+
+....................
+
+### Oppgave Ic
+
+Undersøk hvorvidt bruken av kull som energikilde kan forklare forskjellen i karbonintensitet mellom de fem største landene. Lag to figurer og 100-200 ord med tekst. Husk å gi en fullstendig og nøyaktig beskrivelse av figurene.
+
+**Figur 1**
+
+```{r}
+# besvar oppgave 1c her
+
+df %>%
+  
+  filter(country %in% list, year >= 1920) %>%
+  
+  mutate(coal_share = 100*(coal_co2/co2)) %>% #Regner ut andelen av utslippene som kommer fra
+                                                                     #kull målt i prosent
+  ggplot(aes(x = year, y = coal_share, color = country)) +
+  
+  geom_line() +
+  
+  labs(
+    x = 'År',
+    y = 'Andelen av utslipp fra kull',
+    color = 'Land',
+    title = 'Andelen av co2- utslipp som kommer fra kull (%)'
+  )
+
+
+```
+
+```{r}
+
+
+df %>%
+  
+  filter(country %in% list, year > 1900) %>%
+  
+  ggplot(aes(x = year, y = coal_co2, color = country)) +
+  
+  geom_point(size = 0.5) +
+  
+  geom_line() +
+  
+  labs(x = 'År', y = 'utslipp fra kull', title = 'Årlige utslipp fra kull', subtitle = 'målt i millioner av tonn') 
+  
+
+
+```
+
+*\[Besvar oppgave Ic her\]*
+
+Undersøk hvorvidt bruken av kull som energikilde kan forklare forskjellen i karbonintensitet mellom de fem største landene. Lag to figurer og 100-200 ord med tekst. Husk å gi en fullstendig og nøyaktig beskrivelse av figurene.
+
+....................
+
+Den første figuren måler hvor mye av produksjonsbaserte utslippene i hvert av landene er fra kull (målt i prosent) mellom 1900 til 2023. De ulike landene er markert med farger. På figuren kan vi se at alle landene startet med store andeler av utslipp fra kull, men vi ser at på lang sikt er det en synkende trend. Kina og India er de landene med aller størst andel av kull- utslipp, og vi kan se at i forhold til de andre landene har de hatt en mye mindre nedgang. Vi kan se at de andre landene har en mye brattere nedgang i andel av kull- utslipp. Dette kan skyldes hvordan de ulike landene har klart å omstille seg til andre typer energi, og hvaslags type industri som landene satser mest på.
+
+Den andre figuren viser årlige utslipp fra kull målt i millioner tonn. Her kan vi se at Kina har en betydelig vekst etter år 2000. India har også en stigende kurve, men på et lavere nivå. Usa, Tyskland og Japan har derimot hatt en rett eller synkende kurve.
+
+Sammen viser de to figurene at høy kullandel og utslipp fra kull er en av hovedårsakene på Kinas og Indias høye karbonintesitet, mens de andre landene har klart å redusere utslippene gjennom å omstille seg til andre og mer miljøvennlige energi- kilder.
+
+....................
+
+## II. Konsumbaserte CO2-utslipp
+
+I den foregående analysen har vi slått fast at Kina har høy karbonintensitet i produksjon og at kullforbrenning står for en høy andel av deres utslipp. I hvilken grad kan utslippene knyttes til eksportrettet produksjon? I dataene fra OWID har de variable som de kaller konsumbaserte utslipp, for eksempel variabelen `consumption_co2.`
+
+### Oppgave IIa
+
+Forklar hvordan konsumbaserte CO2-utslipp er konstruert og hvordan vi skal tolke den.
+
+*\[Besvar oppgave IIa her.\]*
+
+....................
+
+konsumbasert co2-utslipp måler utslippene som blir produsert av varer og tjenester ut ifra hvor de blir konsumert, i motsetning til produksjonsbaserte co2-utslipp, som måler utslippene ut ifra hvor varer og tjenester blir produsert.
+
+Tallene blir justert for handel. Man trekker fra utslippene som hører til varer som er laget i landet, men eksportert ut, og man legger til utslippene fra varer som er produsert i andre land, men som landet importerer og bruker.
+
+(<https://ourworldindata.org/grapher/consumption-co2-emissions>)
+
+....................
+
+### Oppgave IIb
+
+Lag en figur som viser utviklingen av konsumbasert CO2 per person og totale, konsumbaserte utslipp. Gi en fullstendig og nøyaktig beskrivelse av figuren og forklar hva den viser.
+
+**Hint:** Hvis du bruker `geom_point()` så kan spesifisere én av variablene ved tilvalget `size` i `aes()`.
+
+```{r}
+# besvar oppgave IIb her
+# hint: size = consumption.co2 i aes argumentet. notat fra forelesning
+
+#graf som viser utviklingen av konsumbaserte utslipp per person
+df%>%
+  filter(country %in% list) %>%
+  ggplot(aes(x = year, y = consumption_co2_per_capita, color = country)) +
+  geom_point(aes(size = consumption_co2)) +
+  scale_x_continuous(limits = c(1989, 2023))
+
+```
+
+*\[Besvar oppgave IIb her.\]*
+
+Lag en figur som viser utviklingen av konsumbasert CO2 per person og totale, konsumbaserte utslipp. Gi en fullstendig og nøyaktig beskrivelse av figuren og forklar hva den viser.
+
+....................
+
+Figuren over viser utvikllingen av konsumbasert co2 per person og totale, konsumbaserte utslipp i de ulike landene. figuren måler verdier fra 1990 fram til 2023. Kurvene i grafen viser konsumbaserte utslipp per innbygger, imens størrelsen på punktene illustrer totale konsumbaserte utslipp.
+
+Hvis vi ser på konsumbaserte utslipp per innbygger, kan vi se at USA ligger øverst, men med en nedgang etter 2005. Under ligger Tyskland og Japan, med en slak og litt synkende kurve. I motsetning ser vi Kina med en økende vekst. På bunn ser vi India, som har en ganske slak kurve, men vi kan se at den såvidt øker litt.
+
+figuren forteller oss blant annet om hvor mye de ulike landene importerer eller eksportere mye varer. Dersom et land eksporterer mange varer og importerer mindre, vil det landet ha lave konsumbaserte utslipp.
+
+Denne måten å måle utslipp på kan være mer rettferdig, siden land som kjøper mye varer fra andre land, blir stilt til ansvar for de utslippene de produserer gjennom forbruk. Det kan også bli enklere å måle hvem som har høyest klimafotavtrykk per person.
+
+....................
+
+## III. Produksjon- og konsumbaserte utslipp
+
+Betrakt følgende figur, og gi en konkret forklaring på hva den viser.
+
+```{r}
+df %>%
+
+  filter(country %in% c(list)) %>% 
+
+  ggplot(aes(x=year, y=trade_co2_share, color = country)) %>%
+  
+  + xlim(1990,2023) %>%
+  
+  + geom_line(size = 1.5) %>%
+  
+  + geom_hline(yintercept=0) %>%
+  
+  + labs(x = "Year", y = "Traded CO2 share", title = "Traded CO2 as share of production-based emissions", subtitle = "CO2 embedded in trade. Share of production based emissions. Percent. 1950-2023.
+Positive (negative) value indicates net imports (export) of CO2 emissions.", color = "Country") %>%
+  
+  + theme_bw()
+```
+
+*\[Besvar oppgave III her\]*
+
+....................
+
+Figuren viser andelen av et lands årlige produksjonsbaserte co2- utslipp som er knyttet til handel, målt i prosent av landets totale utslipp. De ulike landene er visualisert i ulike farger.
+
+y- aksen illustrerer andelen av årlige produksjonsbaserte co2- utslipp som er knyttet til handel. En positiv verdi vil da si at landet importerer mer co2- utslipp knyttet til varer og tjenester fra andre land, enn det de selv eksporterer.
+
+En negativ verdi vil da si at landet eksporterer mer varer og tjenester som produserer co2- utslipp, enn det de importerer.
+
+Utifra figuren kan vi se at både Kina og India har vært under 0% på y- aksen, som vil si at begge landene eksporterer mer co2 intensiv produksjon enn de importerer.
+
+USA hadde negative verdier rundt 1990, men grafen har gjennom årene steget seg, med unntak i ca 2005 - 2010, hvor grafen synker. Verdien i 2023 var rundt 10%, som vil si at landet er en nettoimportør av co2- utslipp.
+
+Japan og Tyskland har de høyeste verdiene. Vi kan se at gjennom årene har grafen vekslet mellom å være synkende og økende, men begge landene har ligget godt over null. Vi kan spesielt se at Tyskland siden 2005 har hatt en stor vekst.
+
+Denne figuren illustrerer godt hvordan rike land ofte importerer co2- intensiv produksjon fra andre land, imens mindre rike land ofte produserer co2- utslipp fra varer og tjenester de eksporterer til andre land.
+
+....................
+
+## KI-erklæring
+
+I denne delen skal du skrive din KI-erklæring. Den skal inneholde:
+
+-   Hvilket KI-verktøy som er brukt
+
+-   Hvilke oppgaver som ble delegert til KI
+
+-   Hvordan du har verifisert innholdet fra KI
+
+-   En ansvarserklæring fra deg som forfatter
+
+**Obligatorisk dokumentasjon**: Dersom du bruker KI-generert tekst ordrett, skal den markeres med anførselstegn. Alt Kl-generert innhold må verifiseres og kildehenvises i teksten
+
+I denne oppgaven har jeg brukt Chat gpt-5 som et hjelpemiddel.
+
+Jeg har brukt denne chatbotten som en sparringspartner for å få en bedre forståelse av oppgaven. Jeg har også brukt den til å hjelpe meg med å feilsøke koden hvis den ikke kjørte som den skulle. Jeg brukte også chat gpt til å hjelpe meg med å forstå figuren i oppgave 3.
+
+Selv om jeg har brukt chatgtp som et hjelpemiddel til enkelte oppgaver, tar jeg fullt og helt ansvar for alt innhold i denne teksten.
